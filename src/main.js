@@ -428,8 +428,8 @@ const help = (c, text) => {
   return c
 }
 
-const fTexte = gui.addFolder('texte')
-help(fTexte.add(params, 'alphabet', ALPHABET_NAMES), 'dessin de départ des lettres — tes retouches sont gardées séparément pour chaque alphabet').onChange((name) => setAlphabet(name))
+const fAlphabet = gui.addFolder('alphabet')
+help(fAlphabet.add(params, 'alphabet', ALPHABET_NAMES), 'dessin de départ des lettres — tes retouches sont gardées séparément pour chaque alphabet').onChange((name) => setAlphabet(name))
 // alphabets personnels : créer (vierge ou copie), supprimer. La page se recharge pour mettre la liste à jour partout
 // (les réglages sont gardés par l'enregistrement automatique).
 function openAlphabet(name) {
@@ -444,9 +444,9 @@ function newAlphabet(copy) {
   if (r.error) return say(`alphabet non créé : ${r.error}`)
   openAlphabet(r.name)
 }
-help(fTexte.add({ nouveau: () => newAlphabet(false) }, 'nouveau').name('+ nouvel alphabet (vierge)'), 'toutes les lettres vides, à dessiner dans l’éditeur')
-help(fTexte.add({ copie: () => newAlphabet(true) }, 'copie').name('⧉ copier cet alphabet'), 'nouvel alphabet qui part de celui-ci (retouches comprises) ; l’original n’est pas touché')
-const cDeleteAlphabet = fTexte
+help(fAlphabet.add({ nouveau: () => newAlphabet(false) }, 'nouveau').name('+ nouvel alphabet (vierge)'), 'toutes les lettres vides, à dessiner dans l’éditeur')
+help(fAlphabet.add({ copie: () => newAlphabet(true) }, 'copie').name('⧉ copier cet alphabet'), 'nouvel alphabet qui part de celui-ci (retouches comprises) ; l’original n’est pas touché')
+const cDeleteAlphabet = fAlphabet
   .add({ suppr: () => {
     if (!isPersoAlphabet(params.alphabet)) return
     if (!confirm(`Supprimer l’alphabet « ${params.alphabet} » et toutes ses lettres ?`)) return
@@ -454,6 +454,7 @@ const cDeleteAlphabet = fTexte
     openAlphabet(ALPHABET_NAMES.includes('signature 7 lignes') ? 'signature 7 lignes' : ALPHABET_NAMES[0])
   } }, 'suppr')
   .name('✕ supprimer cet alphabet')
+const fTexte = gui.addFolder('texte')
 fTexte.add(params, 'texte').name('mot')
 fTexte.add(params, 'espacement', -3, 8, 0.1)
 
