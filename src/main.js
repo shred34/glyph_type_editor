@@ -127,7 +127,33 @@ let layoutVersion = 0
 let layoutCache = { version: -1 }
 const renderer = createCanvasRenderer($('#preview-canvas'), pieces)
 // la taille de l'aperçu change (fenêtre redimensionnée…) : on redessine
-new ResizeObserver(() => !exporting && renderPreview()).observe($('#preview-canvas'))
+// Débordement : le canvas de l'aperçu couvre toute la partie gauche (aperçu, éditeur, bibliothèque), par-dessus
+// l'interface mais sans capter les clics. Le mot reste cadré dans la zone d'aperçu ; ce qui dépasse déborde.
+// (petit écran : le canvas reste dans la zone d'aperçu, sans débordement)
+const previewCanvas = $('#preview-canvas')
+const previewZone = $('#preview-wrap .layers')
+const mainArea = $('main')
+function placeCanvas() {
+  if (getComputedStyle(previewCanvas).position !== 'fixed') {
+    Object.assign(previewCanvas.style, { left: '', top: '', width: '', height: '' })
+    return
+  }
+  const r = mainArea.getBoundingClientRect()
+  Object.assign(previewCanvas.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` })
+}
+function previewFit() {
+  if (getComputedStyle(previewCanvas).position !== 'fixed') return undefined
+  const c = previewCanvas.getBoundingClientRect()
+  const z = previewZone.getBoundingClientRect()
+  return { x: z.left - c.left, y: z.top - c.top, w: z.width, h: z.height }
+}
+const onResize = () => {
+  placeCanvas()
+  if (!exporting) renderPreview()
+}
+new ResizeObserver(onResize).observe(previewZone)
+new ResizeObserver(onResize).observe(mainArea)
+placeCanvas()
 
 function currentLayout(p) {
   if (p !== params) return wordLayout(p) // bouillonnement « motifs aussi » : la graine change à chaque pas
@@ -205,9 +231,12 @@ function frameState(frame, animated = !stopped) {
 
 // aperçu à l'écran : canvas
 function renderPreview(frame = anim.image) {
-  const { p, items, boxes, viewBox } = frameState(frame)
-  renderHits(boxes, viewBox)
-  renderer.draw(items, p, viewBox)
+  const { p, items, boxes } = frameState(frame)
+  // à l'écran, le mot est cadré sur sa zone de base (il garde sa taille) ; les motifs qui dépassent débordent.
+  // L'export, lui, utilise le cadre complet (frameBounds) : tout ce qui est visible est exporté.
+  const view = currentLayout(params).bounds
+  renderHits(boxes, view)
+  renderer.draw(items, p, view, previewFit())
   renderTransport()
 }
 

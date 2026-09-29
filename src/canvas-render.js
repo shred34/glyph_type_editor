@@ -55,8 +55,9 @@ export function createCanvasRenderer(canvas, pieces) {
     }
   }
 
-  // viewBox = [x, y, largeur, hauteur], cadré comme un SVG en « xMidYMid meet »
-  function draw(items, p, [vx, vy, vw, vh]) {
+  // viewBox = [x, y, largeur, hauteur], cadré comme un SVG en « xMidYMid meet » dans la zone `fit`
+  // (en pixels, relative au canvas ; par défaut tout le canvas). Ce qui sort de la zone reste dessiné autour.
+  function draw(items, p, [vx, vy, vw, vh], fit) {
     const dpr = window.devicePixelRatio || 1
     const cw = canvas.clientWidth
     const ch = canvas.clientHeight
@@ -67,10 +68,12 @@ export function createCanvasRenderer(canvas, pieces) {
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.clearRect(0, 0, canvas.width, canvas.height)
     if (!cw || !ch) return
-    const k = Math.min(cw / vw, ch / vh)
+    const box = fit || { x: 0, y: 0, w: cw, h: ch }
+    if (!box.w || !box.h) return
+    const k = Math.min(box.w / vw, box.h / vh)
     const K = k * dpr
-    const E = ((cw - vw * k) / 2 - vx * k) * dpr
-    const F = ((ch - vh * k) / 2 - vy * k) * dpr
+    const E = (box.x + (box.w - vw * k) / 2 - vx * k) * dpr
+    const F = (box.y + (box.h - vh * k) / 2 - vy * k) * dpr
 
     for (const [kind, color, sw] of layersFor(p)) {
       for (const it of items) {
