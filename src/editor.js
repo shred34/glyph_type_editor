@@ -228,7 +228,10 @@ export function setupEditor({ params, pieces, update, setLettre }) {
     }
 
     // barres
+    // alphabet en minuscules : la barre affiche les lettres en minuscules
+    const lower = store.getAlphabet().includes('minuscules')
     for (const b of alphabet.children) {
+      b.textContent = lower ? b.dataset.char.toLowerCase() : b.dataset.char
       b.classList.toggle('current', b.dataset.char === params.lettre)
       b.classList.toggle('edited', store.isEdited(b.dataset.char))
     }
@@ -240,7 +243,7 @@ export function setupEditor({ params, pieces, update, setLettre }) {
     if (document.activeElement !== rowsInput) rowsInput.value = rows
 
     const hint = TOOLS.find((t) => t.id === state.tool).hint
-    $('#editor-label').textContent = `lettre ${params.lettre} · ${cols}×${rows} · ${hint}`
+    $('#editor-label').textContent = `lettre ${lower ? params.lettre.toLowerCase() : params.lettre} · ${cols}×${rows} · ${hint}`
   }
 
   return {

@@ -41,7 +41,7 @@ export const CYCLE_DEFAUT = [
   'symbols-20-engraving-design-syndrome-necronomicon',
   'symbols-18-engraving-design-syndrome-necronomicon',
   '53-design-syndrome-necronomicon',
-  'taches7',
+  'taches29',
 ]
 
 export function defaultAnim() {

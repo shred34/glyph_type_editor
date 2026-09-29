@@ -28,16 +28,16 @@ const pick = (id) => (ids.includes(id) ? id : ids[0])
 // ---------- État par défaut (celui du Spring Workshop) ----------
 // Au chargement, on repart de ces valeurs, puis on applique ce que le navigateur a enregistré
 // automatiquement. « réinitialiser les réglages » revient à ces valeurs.
-const T7 = pick('taches7')
+const T29 = pick('taches29')
 const params = {
   alphabet: ALPHABET_NAMES.includes('signature 7 lignes') ? 'signature 7 lignes' : ALPHABET_NAMES[0],
-  texte: 'Spring Workshop',
+  texte: 'GLYPH & TYPE EDITOR',
   lettre: 'A',
   espacement: 1.5,
 
   mode: 'mix par rôle',
   motif: pick('95-design-syndrome-necronomicon'),
-  roles: { extremite: T7, fut: T7, angle: T7, jonction: T7 },
+  roles: { extremite: T29, fut: T29, angle: T29, jonction: T29 },
 
   taille: 2.85,
   densite: 3,
@@ -61,7 +61,7 @@ const exportOpts = { largeur: 1920, transparent: true }
 
 // Quand l'état par défaut change, on incrémente cette version : les réglages enregistrés avec une
 // ancienne version sont ignorés (les lettres retouchées et les favoris, eux, sont toujours gardés).
-const DEFAULTS_VERSION = 3
+const DEFAULTS_VERSION = 4
 const saved = loadSaved()
 if (saved && (saved.defaultsVersion === DEFAULTS_VERSION || saved.importe)) {
   mergeInto(params, saved.params)

@@ -1,4 +1,5 @@
 import { skeletonAlphabets } from './alphabets-squelette.js'
+import { lowercaseAlphabets } from './alphabets-minuscules.js'
 
 // Alphabets de départ. "#" = case pleine. Chaque lettre peut avoir sa propre largeur ;
 // toutes les lettres d'un alphabet ont la même hauteur (alignées sur la ligne de base).
@@ -45,6 +46,7 @@ const CLASSIQUE = {
   '!': ['..#..', '..#..', '..#..', '..#..', '..#..', '.....', '..#..'],
   '?': ['.###.', '#...#', '....#', '...#.', '..#..', '.....', '..#..'],
   '-': ['.....', '.....', '.....', '.###.', '.....', '.....', '.....'],
+  '&': ['.##..', '#..#.', '#.#..', '.#...', '#.#.#', '#..#.', '.##.#'],
   ' ': ['.....', '.....', '.....', '.....', '.....', '.....', '.....'],
 }
 
@@ -373,6 +375,14 @@ const LARGE = {
     .....
     .....
     .....`),
+  '&': g(`
+    ..##...
+    .#..#..
+    .#.#...
+    ..#....
+    .#.#..#
+    #...##.
+    .###..#`),
   ' ': g(`
     ....
     ....
@@ -785,6 +795,16 @@ const ANGULAIRE = {
     ....
     ....
     ....`),
+  '&': g(`
+    .##..
+    #..#.
+    #..#.
+    .##..
+    .#...
+    #.#.#
+    #..#.
+    #..#.
+    .##.#`),
   ' ': g(`
     ...
     ...
@@ -983,7 +1003,8 @@ export const ALPHABETS = {
   'large 7×7': LARGE,
   'angulaire 9 lignes': ANGULAIRE,
   ...skeletonAlphabets(PROPORTIONNEL),
+  ...lowercaseAlphabets(SIGNATURE),
 }
 
 // Ordre de la barre de lettres dans l'éditeur
-export const CHARSET = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.!?-']
+export const CHARSET = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.!?-&']
