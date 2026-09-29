@@ -155,10 +155,51 @@ function renderHits(boxes, viewBox) {
 // Lecture ou pause : il montre l'image `frame` de l'animation.
 let stopped = true
 
+// Cadre de l'aperçu et des exports : il englobe toujours tous les motifs, même quand ils débordent
+// (grands motifs, étirement, shape…). Jamais plus petit que le cadre de base du mot, et fixe pour toute
+// la boucle quand une animation est active (on ajoute ce que les effets peuvent faire bouger).
+let frameCache = { version: -1 }
+function frameBounds() {
+  if (frameCache.version === layoutVersion) return frameCache.bounds
+  const { items, bounds } = currentLayout(params)
+  const a = anim
+  const on = isActive(a)
+  const turns = on && (a.rotation.actif || a.balancement.actif || a.bouillonnement.actif) // rotations libres
+  const grow = on && a.pulsation.actif ? 1 + a.pulsation.amplitude : 1
+  const slack =
+    (on && a.flottement.actif ? a.flottement.amplitude * 1.4 : 0) +
+    (on && a.bouillonnement.actif ? a.bouillonnement.force * 20 * 1.5 : 0) +
+    (on && a.bouillonnement.actif && a.bouillonnement.motifs ? params.chaos * 30 * 2 : 0)
+  const stroke = params.rendu === 'plein' ? 0 : params.epaisseur
+  let [x0, y0, x1, y1] = [bounds[0], bounds[1], bounds[0] + bounds[2], bounds[1] + bounds[3]]
+  const m = 0.2 * CELL
+  for (const it of items) {
+    const sx = Math.abs(it.sx) * grow
+    const sy = Math.abs(it.sy) * grow
+    const pad = stroke * Math.max(sx, sy) + slack + m
+    let hx, hy
+    if (turns) {
+      hx = hy = 50 * Math.hypot(sx, sy) // n'importe quelle rotation
+    } else {
+      const r = (it.rot * Math.PI) / 180
+      const c = Math.abs(Math.cos(r))
+      const n = Math.abs(Math.sin(r))
+      hx = 50 * (sx * c + sy * n)
+      hy = 50 * (sx * n + sy * c)
+    }
+    x0 = Math.min(x0, it.x - hx - pad)
+    x1 = Math.max(x1, it.x + hx + pad)
+    y0 = Math.min(y0, it.y - hy - pad)
+    y1 = Math.max(y1, it.y + hy + pad)
+  }
+  frameCache = { version: layoutVersion, bounds: [x0, y0, x1 - x0, y1 - y0] }
+  return frameCache.bounds
+}
+
 function frameState(frame, animated = !stopped) {
   const p = animated ? frameParams(params, anim, frame) : params
-  const { items, boxes, bounds } = currentLayout(p)
-  const viewBox = bounds
+  const { items, boxes } = currentLayout(p)
+  const viewBox = frameBounds()
   return { p, items: animated ? animateItems(items, anim, frame) : items, boxes, viewBox }
 }
 
