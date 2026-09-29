@@ -138,8 +138,9 @@ function placeCanvas() {
     Object.assign(previewCanvas.style, { left: '', top: '', width: '', height: '' })
     return
   }
+  // clientWidth : sans la bordure droite, pour que le trait qui sépare du panneau de réglages reste visible
   const r = mainArea.getBoundingClientRect()
-  Object.assign(previewCanvas.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` })
+  Object.assign(previewCanvas.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${mainArea.clientWidth}px`, height: `${r.height}px` })
 }
 function previewFit() {
   if (getComputedStyle(previewCanvas).position !== 'fixed') return undefined
