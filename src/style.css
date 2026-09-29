@@ -84,6 +84,13 @@ main {
   user-select: none;
 }
 
+/* la lettre de l'éditeur passe par-dessus les barres et la bibliothèque quand elle déborde
+   (le dessin ne capte pas les clics : les boutons dessous restent utilisables) */
+#editor-wrap .stage {
+  position: relative;
+  z-index: 3;
+}
+
 /* Barres de l'éditeur */
 .bar {
   display: flex;
