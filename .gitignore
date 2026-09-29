@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# images sources (PNG) : pas publiées
+Glyphes/
+Taches/
