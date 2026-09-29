@@ -1,13 +1,44 @@
 // Lettres modifiées : grille (rows) + réglages par case (cells), historique annuler / rétablir.
 // Une lettre = { rows: ['.###.', …], cells: { 'x,y': { piece, rot, scale } } }
-// Chaque alphabet de départ garde ses propres retouches.
-import { ALPHABETS } from '../alphabet.js'
+// Chaque alphabet de départ garde ses propres retouches, dans son propre tiroir du navigateur.
+import { ALPHABETS as BUILTIN, CHARSET } from '../alphabet.js'
+
+// ---------- Alphabets personnels (créés dans le tool) ----------
+// Liste enregistrée dans le navigateur : [{ id, nom, base }]. `base` = dessin de départ
+// (vide pour un alphabet vierge, copie pour « copier cet alphabet »). Chaque alphabet perso a un
+// identifiant unique : son tiroir ne peut jamais se mélanger avec celui d'un autre alphabet.
+const PERSO_KEY = 'type-tool:alphabets-perso'
+const PERSO_PREFIX = '✎ '
+
+function loadPerso() {
+  try {
+    const list = JSON.parse(localStorage.getItem(PERSO_KEY)) || []
+    return list.filter((a) => a && typeof a.id === 'string' && typeof a.nom === 'string')
+  } catch {
+    return []
+  }
+}
+
+function blankAlphabet() {
+  const out = {}
+  for (const ch of CHARSET) out[ch] = Array.from({ length: 7 }, () => '.....')
+  out[' '] = Array.from({ length: 7 }, () => '...')
+  return out
+}
+
+const perso = loadPerso()
+const persoByName = new Map(perso.map((a) => [PERSO_PREFIX + a.nom, a]))
+const ALPHABETS = { ...BUILTIN }
+for (const a of perso) ALPHABETS[PERSO_PREFIX + a.nom] = a.base && typeof a.base === 'object' ? a.base : blankAlphabet()
 
 export const ALPHABET_NAMES = Object.keys(ALPHABETS)
+export const isPersoAlphabet = (name) => persoByName.has(name)
+
 let current = ALPHABET_NAMES[0]
 // le premier alphabet garde l'ancienne clé, pour ne pas perdre les lettres déjà dessinées
 // (les alphabets de minuscules ont leur propre tiroir, sinon ils partageraient celui des capitales du même nom)
 const keyOf = (name) => {
+  if (persoByName.has(name)) return `type-tool:glyphs:perso-${persoByName.get(name).id}`
   if (name === ALPHABET_NAMES[0]) return 'type-tool:glyphs'
   const [first] = name.split(' ')
   return `type-tool:glyphs:${first}${name.includes('minuscules') ? '-minuscules' : ''}`
@@ -53,7 +84,9 @@ export function setAlphabet(name) {
 export function getGlyph(char) {
   const c = up(char)
   const base = ALPHABETS[current]
-  return edits[c] || { rows: base[c] || base[' '], cells: {} }
+  if (edits[c]) return edits[c]
+  const b = base[c] || base[' ']
+  return Array.isArray(b) ? { rows: b, cells: {} } : b
 }
 
 export const isEdited = (char) => up(char) in edits
@@ -204,4 +237,37 @@ export const ops = {
     const r = clamp(rows)
     rebuild(g, c, r, (x, y) => [x, y - (r - s.rows)])
   },
+}
+
+// ---------- Créer / supprimer un alphabet personnel ----------
+// renvoie le nom affiché du nouvel alphabet, ou { error }
+export function createAlphabet(nom, copyCurrent) {
+  const clean = (nom || '').trim().slice(0, 40)
+  if (!clean) return { error: 'donne un nom à l’alphabet' }
+  const name = PERSO_PREFIX + clean
+  if (name in ALPHABETS) return { error: `un alphabet « ${clean} » existe déjà` }
+  let base = null
+  if (copyCurrent) {
+    // copie : toutes les lettres telles qu'elles s'affichent (retouches comprises), caractères ajoutés inclus
+    base = {}
+    for (const c of [...Object.keys(ALPHABETS[current]), ...customChars()]) base[c] = clone(getGlyph(c))
+  }
+  const list = loadPerso()
+  list.push({ id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, nom: clean, base })
+  try {
+    localStorage.setItem(PERSO_KEY, JSON.stringify(list))
+  } catch {
+    return { error: 'plus de place dans le navigateur' }
+  }
+  return { name }
+}
+
+export function deleteAlphabet(name) {
+  const a = persoByName.get(name)
+  if (!a) return
+  try {
+    localStorage.setItem(PERSO_KEY, JSON.stringify(loadPerso().filter((x) => x.id !== a.id)))
+    localStorage.removeItem(keyOf(name))
+    localStorage.removeItem(keyOf(name) + ':modifiees')
+  } catch {}
 }

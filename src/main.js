@@ -3,7 +3,7 @@ import './style.css'
 import { el } from './svg.js'
 import { loadPieces, CUSTOM_COLLECTION } from './pieces.js'
 import { analyzeSvgFile, loadCustom, saveCustom, setReport, takeReport } from './custom-motifs.js'
-import { ALPHABET_NAMES, getGlyph, setAlphabet, size } from './glyph/store.js'
+import { ALPHABET_NAMES, getGlyph, setAlphabet, size, isPersoAlphabet, createAlphabet, deleteAlphabet } from './glyph/store.js'
 import { CELL, ROLES, layoutGlyph } from './glyph/layout.js'
 import { RENDUS, drawItems } from './render.js'
 import { setupEditor } from './editor.js'
@@ -430,6 +430,30 @@ const help = (c, text) => {
 
 const fTexte = gui.addFolder('texte')
 help(fTexte.add(params, 'alphabet', ALPHABET_NAMES), 'dessin de départ des lettres — tes retouches sont gardées séparément pour chaque alphabet').onChange((name) => setAlphabet(name))
+// alphabets personnels : créer (vierge ou copie), supprimer. La page se recharge pour mettre la liste à jour partout
+// (les réglages sont gardés par l'enregistrement automatique).
+function openAlphabet(name) {
+  params.alphabet = name
+  saveSettings(settings())
+  location.reload()
+}
+function newAlphabet(copy) {
+  const nom = prompt(copy ? `Nom de la copie de « ${params.alphabet} » :` : 'Nom du nouvel alphabet (toutes les lettres seront vides) :')
+  if (nom === null) return
+  const r = createAlphabet(nom, copy)
+  if (r.error) return say(`alphabet non créé : ${r.error}`)
+  openAlphabet(r.name)
+}
+help(fTexte.add({ nouveau: () => newAlphabet(false) }, 'nouveau').name('+ nouvel alphabet (vierge)'), 'toutes les lettres vides, à dessiner dans l’éditeur')
+help(fTexte.add({ copie: () => newAlphabet(true) }, 'copie').name('⧉ copier cet alphabet'), 'nouvel alphabet qui part de celui-ci (retouches comprises) ; l’original n’est pas touché')
+const cDeleteAlphabet = fTexte
+  .add({ suppr: () => {
+    if (!isPersoAlphabet(params.alphabet)) return
+    if (!confirm(`Supprimer l’alphabet « ${params.alphabet} » et toutes ses lettres ?`)) return
+    deleteAlphabet(params.alphabet)
+    openAlphabet(ALPHABET_NAMES.includes('signature 7 lignes') ? 'signature 7 lignes' : ALPHABET_NAMES[0])
+  } }, 'suppr')
+  .name('✕ supprimer cet alphabet')
 fTexte.add(params, 'texte').name('mot')
 fTexte.add(params, 'espacement', -3, 8, 0.1)
 
@@ -818,6 +842,7 @@ function update() {
   requestAnimationFrame(() => {
     pending = false
     if (exporting) return
+    cDeleteAlphabet.show(isPersoAlphabet(params.alphabet))
     cMotif.show(params.mode === 'mono')
     cRoles.forEach((c) => c.show(params.mode === 'mix par rôle'))
     const d = currentDraw()
