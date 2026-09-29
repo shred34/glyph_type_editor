@@ -1,0 +1,22 @@
+{
+  "name": "type-tool",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "trace": "node scripts/trace.js"
+  },
+  "devDependencies": {
+    "potrace": "^2.1.8",
+    "sharp": "^0.35.5",
+    "vite": "^8.3.0"
+  },
+  "dependencies": {
+    "jszip": "^3.10.2",
+    "lil-gui": "^0.21.0",
+    "opentype.js": "^2.0.0"
+  }
+}

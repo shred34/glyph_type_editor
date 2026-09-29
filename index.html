@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>type-tool</title>
+  </head>
+  <body>
+    <svg id="defs" aria-hidden="true"></svg>
+    <main>
+      <section id="preview-wrap" class="panel">
+        <span class="label" id="preview-label">aperçu — cliquer une lettre pour l'éditer</span>
+        <div class="stage">
+          <div class="layers">
+            <canvas id="preview-canvas"></canvas>
+            <svg id="preview"><g id="hits"></g><g id="preview-ink" class="ink"></g></svg>
+          </div>
+        </div>
+        <div id="transport" class="bar">
+          <button id="play" title="lecture / pause (espace) — la pause fige l’image en cours">▶ lecture</button>
+          <button id="stop" title="arrêt : revenir à l’aperçu du mot, sans effet (Échap)">■</button>
+          <input id="scrub" type="range" min="0" value="0" title="avancer image par image" />
+          <span id="frame-info"></span>
+          <span id="status"></span>
+        </div>
+      </section>
+      <section id="bottom">
+        <div id="editor-wrap" class="panel">
+          <span class="label" id="editor-label"></span>
+          <nav id="alphabet" class="bar"></nav>
+          <div id="tools" class="bar"></div>
+          <div id="actions" class="bar"></div>
+          <div class="stage">
+            <svg id="editor"><g id="grid"></g><g id="editor-ink" class="ink"></g><g id="marks"></g></svg>
+          </div>
+        </div>
+        <div id="library"></div>
+      </section>
+    </main>
+    <aside id="gui"></aside>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,387 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  background: #fff;
+  color: #000;
+  font: 11px/1.4 ui-monospace, Menlo, monospace;
+}
+
+#defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 2fr) minmax(0, 3fr);
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid #000;
+}
+
+.panel {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding-top: 28px;
+}
+
+.stage {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 24px;
+  background: var(--fond, #fff);
+}
+
+.stage svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.label {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 0 4px;
+  background: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+#preview-wrap {
+  border-bottom: 1px solid #000;
+}
+
+#bottom {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  min-height: 0;
+}
+
+#editor-wrap {
+  border-right: 1px solid #000;
+  user-select: none;
+}
+
+/* Barres de l'éditeur */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #000;
+}
+
+.bar button {
+  min-width: 20px;
+  padding: 2px 5px;
+  border: 1px solid transparent;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.bar button:hover {
+  border-color: #000;
+}
+
+.bar button.current {
+  background: #000;
+  color: #fff;
+}
+
+#alphabet button.edited {
+  text-decoration: underline;
+}
+
+.bar .brush {
+  width: 22px;
+  height: 22px;
+  margin-left: 4px;
+  border: 1px solid #000;
+}
+
+.bar .size {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin: 0 6px;
+}
+
+.bar input[type='number'] {
+  width: 38px;
+  padding: 2px;
+  border: 1px solid #000;
+  font: inherit;
+  text-align: center;
+}
+
+.baseline {
+  stroke: rgba(128, 128, 128, 0.8);
+  stroke-dasharray: 6 6;
+  vector-effect: non-scaling-stroke;
+}
+
+#marks {
+  pointer-events: none;
+}
+
+/* repères en blanc « différence » : visibles sur l'encre comme sur le fond */
+#marks {
+  mix-blend-mode: difference;
+}
+
+.mark {
+  fill: #fff;
+}
+
+.role-tag {
+  fill: #fff;
+  font: 22px ui-monospace, Menlo, monospace;
+  text-anchor: end;
+}
+
+.ink {
+  pointer-events: none;
+}
+
+.cell {
+  fill: transparent;
+  stroke: rgba(128, 128, 128, 0.35);
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+}
+
+.cell.on {
+  fill: rgba(128, 128, 128, 0.15);
+}
+
+.nogrid .cell {
+  stroke: none;
+}
+
+.nogrid .cell.on {
+  fill: transparent;
+}
+
+.hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.hit.current {
+  fill: rgba(128, 128, 128, 0.12);
+}
+
+/* Aperçu : canvas (dessin) + SVG par-dessus (clic sur les lettres) */
+.layers {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.layers canvas,
+.layers svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Barre de lecture */
+#transport {
+  border-top: 1px solid #000;
+  border-bottom: 0;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+#transport #play {
+  min-width: 80px;
+  border-color: #000;
+}
+
+#transport #stop {
+  border-color: #000;
+}
+
+#scrub {
+  width: 160px;
+  flex: none;
+  accent-color: #000;
+}
+
+#frame-info {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+#status {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* Bibliothèque des motifs */
+#library {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  align-content: start;
+  gap: 4px;
+  padding: 32px 12px 12px;
+  overflow: auto;
+  position: relative;
+}
+
+#library h2 {
+  grid-column: 1 / -1;
+  padding: 8px 4px 0;
+  border-bottom: 1px solid #000;
+  font: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.library-mode {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+}
+
+.library-mode button {
+  padding: 2px 5px;
+  border: 1px solid transparent;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.library-mode button:hover {
+  border-color: #000;
+}
+
+.library-mode button.current {
+  background: #000;
+  color: #fff;
+}
+
+.piece {
+  position: relative;
+  padding: 4px;
+  border: 1px solid transparent;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.piece:hover {
+  border-color: #ccc;
+}
+
+.piece.active {
+  border-color: #000;
+}
+
+.badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  background: #000;
+  color: #fff;
+  font-style: normal;
+  text-align: center;
+}
+
+.badge:empty {
+  display: none;
+}
+
+.cycle-mode .piece:not(.active) svg {
+  opacity: 0.45;
+}
+
+.piece svg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+/* lil-gui en noir et blanc */
+#gui {
+  overflow: auto;
+}
+
+#gui .lil-gui {
+  width: 100%;
+  --background-color: #fff;
+  --text-color: #000;
+  --title-background-color: #fff;
+  --title-text-color: #000;
+  --widget-color: #eee;
+  --hover-color: #ddd;
+  --focus-color: #ccc;
+  --number-color: #000;
+  --string-color: #000;
+  --font-size: 11px;
+  --font-family: ui-monospace, Menlo, monospace;
+  --name-width: 42%;
+}
+
+#gui .lil-gui .lil-title {
+  border-bottom: 1px solid #000;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 800px) {
+  body {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  main {
+    grid-template-rows: 40vh auto;
+    border-right: 0;
+  }
+
+  #bottom {
+    grid-template-columns: 1fr;
+  }
+
+  #editor-wrap {
+    height: 80vh;
+    border-right: 0;
+    border-bottom: 1px solid #000;
+  }
+}
+
+/* favori correspondant aux rôles actuels */
+#gui .lil-controller.current button {
+  background: #000;
+  color: #fff;
+}
