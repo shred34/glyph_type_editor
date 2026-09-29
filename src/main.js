@@ -1,7 +1,8 @@
 import GUI from 'lil-gui'
 import './style.css'
 import { el } from './svg.js'
-import { loadPieces } from './pieces.js'
+import { loadPieces, CUSTOM_COLLECTION } from './pieces.js'
+import { analyzeSvgFile, loadCustom, saveCustom, setReport, takeReport } from './custom-motifs.js'
 import { ALPHABET_NAMES, getGlyph, setAlphabet, size } from './glyph/store.js'
 import { CELL, ROLES, layoutGlyph } from './glyph/layout.js'
 import { RENDUS, drawItems } from './render.js'
@@ -265,18 +266,38 @@ function setLibraryMode(mode) {
 }
 
 let collection = null
+function sectionTitle(name) {
+  const h = Object.assign(document.createElement('h2'), { textContent: name })
+  library.append(h)
+  return h
+}
+let customTitle = null
 for (const p of pieces) {
   if (p.collection !== collection) {
     collection = p.collection
-    library.append(Object.assign(document.createElement('h2'), { textContent: collection }))
+    const h = sectionTitle(collection)
+    if (collection === CUSTOM_COLLECTION) customTitle = h
   }
   const thumb = el('svg', { viewBox: '-55 -55 110 110' })
   thumb.append(el('use', { href: '#piece-' + p.id }))
   const item = document.createElement('button')
   item.className = 'piece'
-  item.title = p.label
+  item.title = p.nom ? `${p.label} · ${p.nom}` : p.label
   item.dataset.id = p.id
   item.append(thumb, p.label, Object.assign(document.createElement('i'), { className: 'badge' }))
+  if (p.collection === CUSTOM_COLLECTION) {
+    // ✕ : retirer ce motif personnel
+    const remove = Object.assign(document.createElement('span'), { className: 'remove', textContent: '✕', title: 'retirer ce motif' })
+    remove.addEventListener('click', (e) => {
+      e.stopPropagation()
+      if (!confirm(`Retirer le motif ${p.label} (${p.nom}) ?`)) return
+      saveCustom(loadCustom().filter((m) => m.id !== p.id))
+      setReport([`motif ${p.label} (${p.nom}) retiré`])
+      saveSettings(settings())
+      location.reload()
+    })
+    item.append(remove)
+  }
   item.addEventListener('click', () => {
     if (libraryMode === 'cycle') {
       const list = anim.cycle.liste
@@ -297,6 +318,84 @@ for (const p of pieces) {
     update()
   })
   library.append(item)
+}
+
+// ---------- Motifs personnels : ajout de SVG ----------
+if (!customTitle) customTitle = sectionTitle(CUSTOM_COLLECTION)
+const addFiles = Object.assign(document.createElement('input'), { type: 'file', accept: '.svg,image/svg+xml', multiple: true })
+addFiles.addEventListener('change', () => {
+  importFiles(addFiles.files)
+  addFiles.value = ''
+})
+const customTools = Object.assign(document.createElement('div'), { className: 'custom-tools' })
+const addBtn = Object.assign(document.createElement('button'), { textContent: '+ ajouter des SVG', title: 'formes pleines vectorisées, une couleur' })
+addBtn.addEventListener('click', () => addFiles.click())
+customTools.append(addBtn, ' ou glisse des .svg n’importe où sur la page')
+library.append(customTools)
+
+// message d'import, en haut de la bibliothèque (reste affiché jusqu'à ce qu'on le ferme)
+const notice = Object.assign(document.createElement('div'), { className: 'library-notice', hidden: true })
+modeBar.after(notice)
+function showNotice(lines) {
+  notice.replaceChildren()
+  const close = Object.assign(document.createElement('button'), { textContent: '✕', title: 'fermer' })
+  close.addEventListener('click', () => (notice.hidden = true))
+  notice.append(close, ...lines.map((l) => Object.assign(document.createElement('p'), { textContent: l })))
+  notice.hidden = false
+  library.scrollTop = 0
+}
+
+async function importFiles(fileList) {
+  const files = [...fileList]
+  if (!files.length) return
+  const list = loadCustom()
+  const lines = []
+  let added = 0
+  for (const f of files) {
+    const r = await analyzeSvgFile(f)
+    if (r.error) {
+      lines.push(`✕ ${f.name} : ${r.error}`)
+      continue
+    }
+    list.push({ id: `perso-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, nom: f.name, svg: r.svg })
+    added++
+    lines.push(`✓ ${f.name} → M${list.length}${r.warnings.length ? ` (⚠ ${r.warnings.join(' ; ')})` : ''}`)
+  }
+  if (!added) return showNotice(lines)
+  if (!saveCustom(list)) {
+    return showNotice([...lines.filter((l) => l.startsWith('✕')), '✕ plus de place dans le navigateur : retire des motifs ou utilise des fichiers plus légers'])
+  }
+  // on recharge pour que les nouveaux motifs soient partout (menus, bibliothèque…) ; les réglages sont gardés
+  setReport(lines)
+  saveSettings(settings())
+  location.reload()
+}
+
+// glisser-déposer n'importe où sur la page
+let dragDepth = 0
+const hasFiles = (e) => [...(e.dataTransfer?.types || [])].includes('Files')
+document.addEventListener('dragenter', (e) => {
+  if (!hasFiles(e)) return
+  dragDepth++
+  library.classList.add('dropping')
+})
+document.addEventListener('dragleave', () => {
+  if (--dragDepth <= 0) library.classList.remove('dropping')
+})
+document.addEventListener('dragover', (e) => hasFiles(e) && e.preventDefault())
+document.addEventListener('drop', (e) => {
+  if (!hasFiles(e)) return
+  e.preventDefault()
+  dragDepth = 0
+  library.classList.remove('dropping')
+  importFiles(e.dataTransfer.files)
+})
+
+// rapport de l'import précédent (affiché après le rechargement)
+const report = takeReport()
+if (report) {
+  showNotice(report)
+  requestAnimationFrame(() => customTitle.scrollIntoView({ block: 'start' }))
 }
 
 function renderLibrary() {

@@ -25,15 +25,16 @@ export function createCanvasRenderer(canvas, pieces) {
     c.setTransform(RES, 0, 0, RES, px / 2, px / 2)
     c.scale(p.s, p.s)
     c.translate(-p.cx, -p.cy)
+    // un motif peut avoir plusieurs formes (motifs personnels), chacune avec sa règle de remplissage
     if (kind !== 'outline') {
       c.fillStyle = color
-      c.fill(p.path2d, 'evenodd')
+      for (const { path2d, rule } of p.paths) c.fill(path2d, rule)
     }
     if (kind !== 'fill' && sw > 0) {
       c.strokeStyle = color
       c.lineWidth = sw / p.s
       c.lineJoin = 'round'
-      c.stroke(p.path2d)
+      for (const { path2d } of p.paths) c.stroke(path2d)
     }
     spr = { img, size }
     cache.set(key, spr)

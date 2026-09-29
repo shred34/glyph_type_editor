@@ -20,10 +20,12 @@ export function buildSVG(svg, defs, fond, meta) {
         done.add(id)
         const g = defs.querySelector('#' + id).cloneNode(true)
         g.id = newId
-        const path = g.querySelector('path')
-        path.removeAttribute('style')
-        if (sw) path.setAttribute('stroke-width', sw * path.dataset.k)
-        path.removeAttribute('data-k')
+        // toutes les formes du motif (un motif personnel peut en avoir plusieurs)
+        for (const shape of g.querySelectorAll('[data-k]')) {
+          shape.removeAttribute('style')
+          if (sw) shape.setAttribute('stroke-width', sw * shape.dataset.k)
+          shape.removeAttribute('data-k')
+        }
         newDefs.append(g)
       }
       use.setAttribute('href', '#' + newId)
