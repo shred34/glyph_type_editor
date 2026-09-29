@@ -13,25 +13,41 @@ const TOOLS = [
   { id: 'effacer', key: 'e', label: 'effacer', hint: 'cliquer-glisser pour vider' },
   { id: 'motif', key: 'm', label: 'motif', hint: 'peindre le motif choisi (cliquer un motif à droite)' },
   { id: 'rotation', key: 'r', label: 'rotation', hint: 'clic : +45° · maj+clic : −45°' },
-  { id: 'taille', key: 't', label: 'taille', hint: 'clic : agrandir · maj+clic : réduire' },
+  { id: 'taille', key: 't', label: 'taille', hint: 'cliquer-glisser pour donner la taille choisie aux cases · maj : taille normale' },
   { id: 'nettoyer', key: 'n', label: 'nettoyer', hint: 'retirer les réglages de la case' },
 ]
-const DRAG_TOOLS = new Set(['dessiner', 'effacer', 'motif', 'nettoyer'])
+const DRAG_TOOLS = new Set(['dessiner', 'effacer', 'motif', 'taille', 'nettoyer'])
 
 export function setupEditor({ params, pieces, update, setLettre }) {
   const $ = (s) => document.querySelector(s)
   const svg = $('#editor')
   const grid = $('#grid')
   const marks = $('#marks')
-  const state = { tool: 'dessiner', brush: params.motif, roles: false, clipboard: null }
+  const state = { tool: 'dessiner', brush: params.motif, taille: 1.5, roles: false, clipboard: null }
 
-  // ---------- Barre des lettres ----------
+  // ---------- Barre des lettres (+ caractères ajoutés par l'utilisateur) ----------
   const alphabet = $('#alphabet')
-  for (const ch of CHARSET) {
-    const b = Object.assign(document.createElement('button'), { textContent: ch })
-    b.dataset.char = ch
-    b.addEventListener('click', () => setLettre(ch))
-    alphabet.append(b)
+  let barKey = ''
+  function renderBar() {
+    const chars = [...CHARSET, ...store.customChars()]
+    const key = chars.join('')
+    if (key === barKey) return
+    barKey = key
+    alphabet.replaceChildren()
+    for (const ch of chars) {
+      const b = Object.assign(document.createElement('button'), { textContent: ch })
+      b.dataset.char = ch
+      b.addEventListener('click', () => setLettre(ch))
+      alphabet.append(b)
+    }
+    const add = Object.assign(document.createElement('button'), { textContent: '+ caractère', className: 'add-char', title: 'dessiner un nouveau caractère (n’importe quelle touche du clavier : @ # * § € …)' })
+    add.addEventListener('click', () => {
+      const answer = prompt('Quel caractère veux-tu dessiner ? (une touche du clavier : @ # * § ( ) + / € …)')
+      const ch = [...(answer || '').trim()][0]
+      if (!ch) return
+      setLettre(store.createChar(ch))
+    })
+    alphabet.append(add)
   }
 
   // ---------- Outils ----------
@@ -45,7 +61,17 @@ export function setupEditor({ params, pieces, update, setLettre }) {
   const brush = el('svg', { viewBox: '-55 -55 110 110', class: 'brush' })
   const brushUse = el('use')
   brush.append(brushUse)
-  tools.append(brush)
+  // outil taille : la taille du pinceau
+  const sizeBrush = Object.assign(document.createElement('span'), { className: 'size-brush', title: 'taille donnée aux cases peintes (1 = normale)' })
+  const sizeRange = Object.assign(document.createElement('input'), { type: 'range', min: 0.2, max: 4, step: 0.05, value: state.taille })
+  const sizeValue = document.createElement('b')
+  sizeRange.addEventListener('input', () => {
+    state.taille = +sizeRange.value
+    sizeValue.textContent = `×${state.taille.toFixed(2)}`
+  })
+  sizeValue.textContent = `×${state.taille.toFixed(2)}`
+  sizeBrush.append(sizeRange, sizeValue)
+  tools.append(brush, sizeBrush)
 
   function setTool(id) {
     state.tool = id
@@ -76,10 +102,6 @@ export function setupEditor({ params, pieces, update, setLettre }) {
     ['×2', 'doubler la résolution (chaque case devient 2 × 2)', () => edit(store.ops.doubler)],
     ['copier', 'copier la lettre', () => (state.clipboard = structuredClone(store.getGlyph(params.lettre)))],
     ['coller', 'coller dans la lettre', () => state.clipboard && edit((g) => Object.assign(g, structuredClone(state.clipboard)))],
-    ['réinit.', 'revenir à la lettre d’origine', () => {
-      store.resetGlyph(params.lettre)
-      update()
-    }],
   ]
   const actions = $('#actions')
   for (const [label, title, fn] of ACTIONS) {
@@ -87,6 +109,20 @@ export function setupEditor({ params, pieces, update, setLettre }) {
     b.addEventListener('click', fn)
     actions.append(b)
   }
+  // « original » : on = lettre d'origine affichée (ta version est gardée de côté) ; off = ta version revient
+  const originalBtn = Object.assign(document.createElement('button'), { textContent: 'original', title: 'afficher la lettre d’origine ; recliquer remet ta version modifiée' })
+  originalBtn.addEventListener('click', () => {
+    if (!store.canToggleOriginal(params.lettre)) return
+    store.toggleOriginal(params.lettre)
+    update()
+  })
+  // caractère ajouté : on peut le supprimer
+  const deleteBtn = Object.assign(document.createElement('button'), { textContent: '✕ supprimer', title: 'supprimer ce caractère ajouté (⌘Z pour annuler)' })
+  deleteBtn.addEventListener('click', () => {
+    store.resetGlyph(params.lettre)
+    setLettre('A')
+  })
+  actions.append(originalBtn, deleteBtn)
 
   // Taille de la grille
   const sizeBox = Object.assign(document.createElement('span'), { className: 'size' })
@@ -137,13 +173,13 @@ export function setupEditor({ params, pieces, update, setLettre }) {
           if (!store.isOn(g, x, y)) return
           store.patchCell(g, x, y, (o) => ({ ...o, rot: (((o.rot || 0) + (e.shiftKey ? -45 : 45)) % 360 + 360) % 360 || undefined }))
           break
-        case 'taille':
+        case 'taille': {
           if (!store.isOn(g, x, y)) return
-          store.patchCell(g, x, y, (o) => {
-            const s = Math.max(0.2, Math.min(4, (o.scale || 1) * (e.shiftKey ? 0.8 : 1.25)))
-            return { ...o, scale: Math.abs(s - 1) < 0.01 ? undefined : +s.toFixed(3) }
-          })
+          // maj : taille normale ; sinon la taille du pinceau
+          const t = e.shiftKey ? 1 : state.taille
+          store.patchCell(g, x, y, (o) => ({ ...o, scale: Math.abs(t - 1) < 0.01 ? undefined : +t.toFixed(3) }))
           break
+        }
         case 'nettoyer':
           store.patchCell(g, x, y, () => null)
           break
@@ -228,21 +264,31 @@ export function setupEditor({ params, pieces, update, setLettre }) {
     }
 
     // barres
+    renderBar()
     // alphabet en minuscules : la barre affiche les lettres en minuscules
     const lower = store.getAlphabet().includes('minuscules')
-    for (const b of alphabet.children) {
+    for (const b of alphabet.querySelectorAll('button[data-char]')) {
       b.textContent = lower ? b.dataset.char.toLowerCase() : b.dataset.char
       b.classList.toggle('current', b.dataset.char === params.lettre)
       b.classList.toggle('edited', store.isEdited(b.dataset.char))
     }
     for (const b of tools.querySelectorAll('button')) b.classList.toggle('current', b.dataset.tool === state.tool)
     brush.style.display = state.tool === 'motif' ? '' : 'none'
+    sizeBrush.style.display = state.tool === 'taille' ? '' : 'none'
+    const custom = store.customChars().includes(params.lettre.toUpperCase())
+    originalBtn.style.display = custom ? 'none' : ''
+    deleteBtn.style.display = custom ? '' : 'none'
+    originalBtn.disabled = !store.canToggleOriginal(params.lettre)
+    originalBtn.classList.toggle('current', store.showsOriginal(params.lettre))
+    originalBtn.textContent = store.showsOriginal(params.lettre) ? 'original : on' : 'original'
     brushUse.setAttribute('href', '#piece-' + state.brush)
     rolesToggle.classList.toggle('current', state.roles)
     if (document.activeElement !== colsInput) colsInput.value = cols
     if (document.activeElement !== rowsInput) rowsInput.value = rows
 
-    const hint = TOOLS.find((t) => t.id === state.tool).hint
+    const hint = store.showsOriginal(params.lettre)
+      ? 'lettre d’origine affichée — reclique « original » pour retrouver ta version (si tu la retouches, elle devient ta nouvelle version, ⌘Z pour revenir)'
+      : TOOLS.find((t) => t.id === state.tool).hint
     $('#editor-label').textContent = `lettre ${lower ? params.lettre.toLowerCase() : params.lettre} · ${cols}×${rows} · ${hint}`
   }
 

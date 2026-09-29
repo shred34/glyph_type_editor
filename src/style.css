@@ -109,6 +109,32 @@ main {
   color: #fff;
 }
 
+#alphabet .add-char {
+  margin-left: 6px;
+  border-color: #000;
+}
+
+.bar button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.bar button:disabled:hover {
+  border-color: transparent;
+}
+
+.size-brush {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+}
+
+.size-brush input {
+  width: 90px;
+  accent-color: #000;
+}
+
 #alphabet button.edited {
   text-decoration: underline;
 }

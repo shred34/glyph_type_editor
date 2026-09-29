@@ -16,11 +16,13 @@ const MAX_SIZE = 40
 const up = (c) => c.toUpperCase()
 const clone = (g) => structuredClone(g)
 
+// edits : lettres retouchées ; stash : versions retouchées mises de côté par le bouton « original »
 let edits = load()
+let stash = load(':modifiees')
 
-function load() {
+function load(suffix = '') {
   try {
-    const raw = JSON.parse(localStorage.getItem(keyOf(current))) || {}
+    const raw = JSON.parse(localStorage.getItem(keyOf(current) + suffix)) || {}
     // ancien format : simple liste de lignes
     for (const [k, v] of Object.entries(raw)) if (Array.isArray(v)) raw[k] = { rows: v, cells: {} }
     return raw
@@ -32,6 +34,8 @@ function load() {
 function save() {
   try {
     localStorage.setItem(keyOf(current), JSON.stringify(edits))
+    if (Object.keys(stash).length) localStorage.setItem(keyOf(current) + ':modifiees', JSON.stringify(stash))
+    else localStorage.removeItem(keyOf(current) + ':modifiees')
   } catch {}
 }
 
@@ -41,6 +45,7 @@ export function setAlphabet(name) {
   if (!ALPHABETS[name] || name === current) return
   current = name
   edits = load()
+  stash = load(':modifiees')
   undoStack.length = 0
   redoStack.length = 0
 }
@@ -52,6 +57,37 @@ export function getGlyph(char) {
 }
 
 export const isEdited = (char) => up(char) in edits
+
+// caractères ajoutés par l'utilisateur (absents de l'alphabet de départ), dans l'ordre de création
+export const customChars = () => [...new Set([...Object.keys(edits), ...Object.keys(stash)])].filter((c) => c !== ' ' && !(c in ALPHABETS[current]))
+
+export function createChar(char) {
+  const c = up(char)
+  if (c in edits || c in ALPHABETS[current]) return c
+  snapshot(c)
+  const { rows, cols } = size(getGlyph('A'))
+  edits[c] = { rows: Array.from({ length: rows }, () => '.'.repeat(cols)), cells: {} }
+  save()
+  return c
+}
+
+// ---------- Bouton « original » (on / off) ----------
+// on : la lettre d'origine s'affiche et la version retouchée est mise de côté ; off : la version retouchée revient
+export const showsOriginal = (char) => up(char) in stash
+export const canToggleOriginal = (char) => up(char) in edits || up(char) in stash
+
+export function toggleOriginal(char) {
+  const c = up(char)
+  snapshot(c)
+  if (c in stash) {
+    edits[c] = stash[c]
+    delete stash[c]
+  } else if (c in edits) {
+    stash[c] = edits[c]
+    delete edits[c]
+  }
+  save()
+}
 export const size = (g) => ({ cols: g.rows[0]?.length || 0, rows: g.rows.length })
 
 // ---------- Historique ----------
@@ -61,7 +97,7 @@ const redoStack = []
 // À appeler avant chaque modification (une fois par geste)
 export function snapshot(char) {
   const c = up(char)
-  undoStack.push({ c, g: edits[c] && clone(edits[c]) })
+  undoStack.push({ c, g: edits[c] && clone(edits[c]), s: stash[c] && clone(stash[c]) })
   if (undoStack.length > 200) undoStack.shift()
   redoStack.length = 0
 }
@@ -69,9 +105,11 @@ export function snapshot(char) {
 function swap(from, to) {
   const e = from.pop()
   if (!e) return null
-  to.push({ c: e.c, g: edits[e.c] && clone(edits[e.c]) })
+  to.push({ c: e.c, g: edits[e.c] && clone(edits[e.c]), s: stash[e.c] && clone(stash[e.c]) })
   if (e.g) edits[e.c] = e.g
   else delete edits[e.c]
+  if (e.s) stash[e.c] = e.s
+  else delete stash[e.c]
   save()
   return e.c
 }
@@ -84,12 +122,14 @@ export function mutate(char, fn) {
   const g = clone(getGlyph(c))
   fn(g)
   edits[c] = g
+  delete stash[c] // on retouche la lettre : elle devient la nouvelle version modifiée (⌘Z pour revenir)
   save()
 }
 
 export function resetGlyph(char) {
   snapshot(char)
   delete edits[up(char)]
+  delete stash[up(char)]
   save()
 }
 
