@@ -62,7 +62,12 @@ function load(suffix = '') {
   }
 }
 
+// compteur de modifications : l'éditeur ne se redessine que s'il a changé (ou si ses réglages ont changé)
+let version = 0
+export const getVersion = () => version
+
 function save() {
+  version++
   try {
     localStorage.setItem(keyOf(current), JSON.stringify(edits))
     if (Object.keys(stash).length) localStorage.setItem(keyOf(current) + ':modifiees', JSON.stringify(stash))
@@ -75,6 +80,7 @@ export const getAlphabet = () => current
 export function setAlphabet(name) {
   if (!ALPHABETS[name] || name === current) return
   current = name
+  version++
   edits = load()
   stash = load(':modifiees')
   undoStack.length = 0

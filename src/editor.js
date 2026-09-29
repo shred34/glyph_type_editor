@@ -229,7 +229,15 @@ export function setupEditor({ params, pieces, update, setLettre }) {
   })
 
   // ---------- Rendu ----------
+  // Réglages qui changent le dessin de l'éditeur. Les autres (mot, animation, export…) ne le concernent pas :
+  // on ne le redessine alors pas, pour rester fluide (surtout sur Safari).
+  const DRAWN_BY = ['lettre', 'alphabet', 'mode', 'motif', 'roles', 'taille', 'densite', 'etirement', 'orienter', 'rotation', 'miroir', 'chaos', 'graine', 'rendu', 'epaisseur', 'encre', 'contour', 'fond', 'grille']
+  let lastKey = ''
+
   function render() {
+    const key = JSON.stringify([store.getVersion(), DRAWN_BY.map((k) => params[k]), state.tool, state.brush, state.roles])
+    if (key === lastKey) return
+    lastKey = key
     const glyph = store.getGlyph(params.lettre)
     const { cols, rows } = store.size(glyph)
     svg.setAttribute('viewBox', `${-MARGIN} ${-MARGIN} ${cols * CELL + 2 * MARGIN} ${rows * CELL + 2 * MARGIN}`)

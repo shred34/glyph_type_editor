@@ -261,7 +261,7 @@ library.append(modeBar)
 
 function setLibraryMode(mode) {
   libraryMode = mode
-  if (mode === 'cycle') say('clique les motifs à faire défiler, dans l’ordre voulu (les numéros donnent l’ordre)')
+  if (mode === 'cycle') say('active le cycle, puis clique les motifs dans l’ordre voulu')
   renderLibrary()
 }
 
