@@ -290,6 +290,14 @@ main {
   letter-spacing: 0.05em;
 }
 
+/* formes de base : une seule ligne de 6 */
+.basic-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+}
+
 .library-mode {
   grid-column: 1 / -1;
   display: flex;
@@ -424,7 +432,8 @@ main {
 
 /* lil-gui en noir et blanc */
 #gui {
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 #gui .lil-gui {
@@ -469,6 +478,28 @@ main {
     border-right: 0;
     border-bottom: 1px solid #000;
   }
+}
+
+/* sous-réglages (ex. favoris dans motifs, effets dans animation) : tout le sous-dossier est légèrement décalé */
+#gui .lil-root > .lil-children > .lil-gui > .lil-children > .lil-gui {
+  width: auto;
+  margin-left: 10px;
+  border-left: 1px solid #ccc;
+}
+
+#gui .lil-root > .lil-children > .lil-gui > .lil-children > .lil-gui > .lil-children {
+  margin-left: 0;
+  border-left: none;
+}
+
+/* titre du panneau : nom de l'outil, pas repliable */
+#gui .lil-root > .lil-title {
+  pointer-events: none;
+  letter-spacing: 0.08em;
+}
+
+#gui .lil-root > .lil-title::before {
+  display: none;
 }
 
 /* favori correspondant aux rôles actuels */

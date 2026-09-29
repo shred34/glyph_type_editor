@@ -1,7 +1,7 @@
 import GUI from 'lil-gui'
 import './style.css'
 import { el } from './svg.js'
-import { loadPieces, CUSTOM_COLLECTION } from './pieces.js'
+import { loadPieces, CUSTOM_COLLECTION, BASIC_COLLECTION } from './pieces.js'
 import { analyzeSvgFile, loadCustom, saveCustom, setReport, takeReport } from './custom-motifs.js'
 import { ALPHABET_NAMES, getGlyph, setAlphabet, size, isPersoAlphabet, createAlphabet, deleteAlphabet } from './glyph/store.js'
 import { CELL, ROLES, layoutGlyph } from './glyph/layout.js'
@@ -272,11 +272,16 @@ function sectionTitle(name) {
   return h
 }
 let customTitle = null
+let basicRow = null // les formes de base tiennent sur une seule ligne
 for (const p of pieces) {
   if (p.collection !== collection) {
     collection = p.collection
     const h = sectionTitle(collection)
     if (collection === CUSTOM_COLLECTION) customTitle = h
+    if (collection === BASIC_COLLECTION) {
+      basicRow = Object.assign(document.createElement('div'), { className: 'basic-row' })
+      library.append(basicRow)
+    }
   }
   const thumb = el('svg', { viewBox: '-55 -55 110 110' })
   thumb.append(el('use', { href: '#piece-' + p.id }))
@@ -317,7 +322,8 @@ for (const p of pieces) {
     refreshGui()
     update()
   })
-  library.append(item)
+  if (p.collection === BASIC_COLLECTION) basicRow.append(item)
+  else library.append(item)
 }
 
 // ---------- Motifs personnels : ajout de SVG ----------
@@ -425,7 +431,7 @@ function renderLibrary() {
 }
 
 // ---------- Réglages ----------
-const gui = new GUI({ container: $('#gui'), title: 'réglages' })
+const gui = new GUI({ container: $('#gui'), title: 'GLYPH & TYPE EDITOR' })
 const options = Object.fromEntries(pieces.map((p) => [p.label, p.id]))
 const help = (c, text) => {
   c.domElement.title = text
