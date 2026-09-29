@@ -9,6 +9,7 @@ import { RENDUS, drawItems } from './render.js'
 import { setupEditor } from './editor.js'
 import { SENS, EFFETS, PRESETS, PRESET_DESC, CYCLE_DEFAUT, defaultAnim, resetEffects, isActive, frameParams, animateItems, cycleDuration } from './anim.js'
 import { createCanvasRenderer } from './canvas-render.js'
+import { ENSEMBLE_NEUTRE, isNeutral, shapeWord } from './word-shape.js'
 import { buildSVG, download } from './export/svg.js'
 import { exportPNG, exportFrames } from './export/png.js'
 import { mergeInto, loadSaved, saveSettings, clearSettings, fullState, applyState, readStateFile, wipeEverything } from './state.js'
@@ -47,6 +48,8 @@ const params = {
   miroir: true,
   chaos: 0.1,
   graine: 1,
+  // déformations du mot entier (forme → shape), neutres par défaut
+  ensemble: { ...ENSEMBLE_NEUTRE },
 
   rendu: 'halo',
   epaisseur: 2.5,
@@ -102,13 +105,21 @@ function wordLayout(p) {
     const s = size(g)
     const dy = (height - s.rows) * CELL
     const li = chars.length > 1 ? i / (chars.length - 1) : 0
-    for (const it of layoutGlyph(ch.toUpperCase(), g, p, pieces)) items.push({ ...it, x: it.x + x, y: it.y + dy, li })
+    for (const it of layoutGlyph(ch.toUpperCase(), g, p, pieces)) items.push({ ...it, x: it.x + x, y: it.y + dy, li, letter: i })
     boxes.push({ ch, x, y: dy, w: s.cols * CELL, h: s.rows * CELL })
     x += (s.cols + p.espacement) * CELL
   })
   const width = Math.max(CELL, x - p.espacement * CELL)
-  items.forEach((it, idx) => Object.assign(it, { idx, nx: it.x / width, ny: it.y / (height * CELL) }))
-  return { items, boxes, width, height: height * CELL }
+  const H = height * CELL
+  // réglages « mot entier » : seulement s'ils ne sont pas neutres (sinon rien ne change)
+  if (p.ensemble && !isNeutral(p.ensemble)) {
+    const shaped = shapeWord(items, boxes, width, H, p.ensemble, p.espacement, p.graine, MARGIN)
+    const [bx, by, bw, bh] = shaped.bounds
+    shaped.items.forEach((it, idx) => Object.assign(it, { idx, nx: (it.x - bx) / bw, ny: (it.y - by) / bh }))
+    return { items: shaped.items, boxes: shaped.boxes, width, height: H, bounds: shaped.bounds }
+  }
+  items.forEach((it, idx) => Object.assign(it, { idx, nx: it.x / width, ny: it.y / H }))
+  return { items, boxes, width, height: H, bounds: [-MARGIN, -MARGIN, width + 2 * MARGIN, H + 2 * MARGIN] }
 }
 
 // La mise en page du mot ne change que si les réglages changent : on la garde en mémoire entre les images
@@ -126,7 +137,7 @@ function currentLayout(p) {
 
 let hitsKey = ''
 function renderHits(boxes, viewBox) {
-  const key = JSON.stringify([boxes, params.lettre])
+  const key = JSON.stringify([boxes, viewBox, params.lettre])
   if (key === hitsKey) return
   hitsKey = key
   preview.setAttribute('viewBox', viewBox.join(' '))
@@ -146,8 +157,8 @@ let stopped = true
 
 function frameState(frame, animated = !stopped) {
   const p = animated ? frameParams(params, anim, frame) : params
-  const { items, boxes, width, height } = currentLayout(p)
-  const viewBox = [-MARGIN, -MARGIN, width + 2 * MARGIN, height + 2 * MARGIN]
+  const { items, boxes, bounds } = currentLayout(p)
+  const viewBox = bounds
   return { p, items: animated ? animateItems(items, anim, frame) : items, boxes, viewBox }
 }
 
@@ -600,6 +611,25 @@ fForme
   } }, 'graine')
   .name('🎲 nouvelle graine')
 
+// shape : déforme la structure des lettres (position des motifs), pas les motifs eux-mêmes.
+// S'applique à l'aperçu du mot et aux exports ; l'éditeur de lettre reste sur sa grille.
+const fEnsemble = fForme.addFolder('shape (aperçu seulement)')
+fEnsemble.close() // fermé au chargement
+const E = params.ensemble
+help(fEnsemble.add(E, 'hauteur', 0.3, 3, 0.01).name('étirer en hauteur'), 'les lettres s’allongent vers le haut, à partir de la ligne de base (1 = normal)')
+help(fEnsemble.add(E, 'resserrer', 0.3, 1.5, 0.01), 'chaque lettre se contracte sur elle-même, en hauteur et en largeur (1 = normal)')
+help(fEnsemble.add(E, 'inclinaison', -40, 40, 1).name('inclinaison (°)'), 'italique : le haut des lettres penche')
+help(fEnsemble.add(E, 'vague', 0, 3, 0.05), 'la ligne de base ondule, les motifs suivent la pente')
+const cPeriode = help(fEnsemble.add(E, 'periode', 1, 12, 0.5).name('longueur de vague'), 'longueur d’une ondulation, en nombre de lettres (visible quand la vague est active)')
+help(fEnsemble.add(E, 'courbe', -3, 3, 0.05), 'le mot se courbe en arc : positif = le milieu monte, négatif = il descend')
+help(fEnsemble.add(E, 'desordre', 0, 1, 0.01).name('désordre'), 'chaque lettre est un peu tournée et décalée, comme posée à la main')
+fEnsemble
+  .add({ zero: () => {
+    Object.assign(E, ENSEMBLE_NEUTRE)
+    refreshGui()
+  } }, 'zero')
+  .name('↺ remettre à zéro')
+
 const fRendu = gui.addFolder('rendu')
 fRendu.add(params, 'rendu', RENDUS)
 const cEpaisseur = fRendu.add(params, 'epaisseur', 0, 60, 0.5).name('épaisseur contour')
@@ -854,6 +884,7 @@ function update() {
     pending = false
     if (exporting) return
     cDeleteAlphabet.show(isPersoAlphabet(params.alphabet))
+    cPeriode.show(params.ensemble.vague > 0)
     cMotif.show(params.mode === 'mono')
     cRoles.forEach((c) => c.show(params.mode === 'mix par rôle'))
     const d = currentDraw()
