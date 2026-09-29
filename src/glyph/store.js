@@ -6,7 +6,12 @@ import { ALPHABETS } from '../alphabet.js'
 export const ALPHABET_NAMES = Object.keys(ALPHABETS)
 let current = ALPHABET_NAMES[0]
 // le premier alphabet garde l'ancienne clé, pour ne pas perdre les lettres déjà dessinées
-const keyOf = (name) => (name === ALPHABET_NAMES[0] ? 'type-tool:glyphs' : `type-tool:glyphs:${name.split(' ')[0]}`)
+// (les alphabets de minuscules ont leur propre tiroir, sinon ils partageraient celui des capitales du même nom)
+const keyOf = (name) => {
+  if (name === ALPHABET_NAMES[0]) return 'type-tool:glyphs'
+  const [first] = name.split(' ')
+  return `type-tool:glyphs:${first}${name.includes('minuscules') ? '-minuscules' : ''}`
+}
 const MAX_SIZE = 40
 const up = (c) => c.toUpperCase()
 const clone = (g) => structuredClone(g)
