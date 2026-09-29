@@ -659,7 +659,7 @@ effect('cycle', 'cycle des motifs', (f, o) => {
 
 // ---------- Export ----------
 const fExport = gui.addFolder('export')
-const QUALITES = { 'écran — 1920 px': 1920, 'impression — 5000 px': 5000 }
+const QUALITES = { 'écran — 1920 px': 1920, 'HD — 2560 px': 2560, 'grand écran — 3840 px (4K)': 3840, 'impression — 5000 px': 5000 }
 if (!Object.values(QUALITES).includes(exportOpts.largeur)) exportOpts.largeur = 1920
 help(fExport.add(exportOpts, 'largeur', QUALITES).name('qualité PNG'), 'impression : 5000 px de large, pour les grands formats (plus lent, surtout pour la boucle)')
 fExport.add(exportOpts, 'transparent').name('fond transparent')
