@@ -17,7 +17,7 @@ function shortLabel(id) {
 }
 
 async function loadIndex({ dir, name }) {
-  const res = await fetch(`/${dir}/index.json`)
+  const res = await fetch(`${import.meta.env.BASE_URL}${dir}/index.json`)
   if (!res.ok) return []
   return (await res.json()).map((entry) => ({ ...entry, collection: name }))
 }
@@ -31,7 +31,7 @@ export async function loadPieces(host) {
   // motifs du projet : un seul tracé par fichier (vectorisation potrace)
   const builtIn = await Promise.all(
     index.map(async (entry) => {
-      const text = await fetch('/' + entry.file).then((r) => r.text())
+      const text = await fetch(import.meta.env.BASE_URL + entry.file).then((r) => r.text())
       const source = new DOMParser().parseFromString(text, 'image/svg+xml').querySelector('path')
       const node = el('g')
       node.append(el('path', { d: source.getAttribute('d'), 'fill-rule': 'evenodd' }))
