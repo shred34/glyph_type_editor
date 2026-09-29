@@ -105,7 +105,11 @@ export function layoutGlyph(char, glyph, p, pieces) {
       for (let j = 1; j < n; j++) {
         const f = j / n
         const mid = { x: cell.x + dx * f, y: cell.y + dy * f, role: 'fut', angle: angleOf(dx, dy) + 90 }
-        items.push({ ...place(char, glyph, p, pieces, mid, `${cell.x},${cell.y},${dx},${dy},${j}`, {}, sizeFactor), extra: true })
+        // taille : moyenne des deux cases voisines (sinon un motif normal apparaît entre deux petits)
+        const s0 = own.scale || 1
+        const s1 = glyph.cells[`${cell.x + dx},${cell.y + dy}`]?.scale || 1
+        const between = { scale: s0 + (s1 - s0) * f }
+        items.push({ ...place(char, glyph, p, pieces, mid, `${cell.x},${cell.y},${dx},${dy},${j}`, between, sizeFactor), extra: true })
       }
     }
   }
