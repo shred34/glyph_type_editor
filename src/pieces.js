@@ -69,6 +69,13 @@ export async function loadPieces(host) {
     }),
   )
 
+  // Glyphes : codes G1, G2… dans l'ordre d'affichage d'avant (4, 5, 19…, puis S1, S15…).
+  // Seul le nom affiché change : les identifiants internes restent les mêmes (réglages, rôles, cycle, états…).
+  const glyphes = builtIn.filter((p) => p.collection === 'glyphes')
+  glyphes
+    .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }))
+    .forEach((p, i) => (p.label = `G${i + 1}`))
+
   const basic = BASIC_SHAPES.map(([id, label, nom, d, echelle, decalage]) => {
     const node = el('g')
     node.append(el('path', { d, 'fill-rule': 'evenodd' }))
