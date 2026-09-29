@@ -13,7 +13,7 @@ const TOOLS = [
   { id: 'effacer', key: 'e', label: 'effacer', hint: 'cliquer-glisser pour vider' },
   { id: 'motif', key: 'm', label: 'motif', hint: 'peindre le motif choisi (cliquer un motif à droite)' },
   { id: 'rotation', key: 'r', label: 'rotation', hint: 'clic : +45° · maj+clic : −45°' },
-  { id: 'taille', key: 't', label: 'taille', hint: 'cliquer-glisser pour donner la taille choisie aux cases · maj : taille normale' },
+  { id: 'taille', key: 't', label: 'taille', hint: 'glisser : applique la taille choisie · maj : taille normale' },
   { id: 'nettoyer', key: 'n', label: 'nettoyer', hint: 'retirer les réglages de la case' },
 ]
 const DRAG_TOOLS = new Set(['dessiner', 'effacer', 'motif', 'taille', 'nettoyer'])
@@ -23,7 +23,7 @@ export function setupEditor({ params, pieces, update, setLettre }) {
   const svg = $('#editor')
   const grid = $('#grid')
   const marks = $('#marks')
-  const state = { tool: 'dessiner', brush: params.motif, taille: 1.5, roles: false, clipboard: null }
+  const state = { tool: 'dessiner', brush: params.motif, taille: 1, roles: false, clipboard: null }
 
   // ---------- Barre des lettres (+ caractères ajoutés par l'utilisateur) ----------
   const alphabet = $('#alphabet')
@@ -62,7 +62,7 @@ export function setupEditor({ params, pieces, update, setLettre }) {
   const brushUse = el('use')
   brush.append(brushUse)
   // outil taille : la taille du pinceau
-  const sizeBrush = Object.assign(document.createElement('span'), { className: 'size-brush', title: 'taille donnée aux cases peintes (1 = normale)' })
+  const sizeBrush = Object.assign(document.createElement('span'), { className: 'size-brush', title: 'taille des cases peintes avec dessiner, motif et taille (×1 = normale)' })
   const sizeRange = Object.assign(document.createElement('input'), { type: 'range', min: 0.2, max: 4, step: 0.05, value: state.taille })
   const sizeValue = document.createElement('b')
   sizeRange.addEventListener('input', () => {
@@ -156,30 +156,32 @@ export function setupEditor({ params, pieces, update, setLettre }) {
     return x >= 0 && y >= 0 && x < cols && y < rows ? [x, y] : null
   }
 
+  // taille du pinceau appliquée à une case (×1 = on retire le réglage)
+  const withSize = (o, t = state.taille) => ({ ...o, scale: Math.abs(t - 1) < 0.01 ? undefined : +t.toFixed(3) })
+
   function apply([x, y], e) {
     store.mutate(params.lettre, (g) => {
       switch (state.tool) {
         case 'dessiner':
           store.setOn(g, x, y, stroke.value)
+          if (stroke.value) store.patchCell(g, x, y, (o) => withSize(o))
           break
         case 'effacer':
           store.setOn(g, x, y, false)
           break
         case 'motif':
           store.setOn(g, x, y, true)
-          store.patchCell(g, x, y, (o) => ({ ...o, piece: state.brush }))
+          store.patchCell(g, x, y, (o) => withSize({ ...o, piece: state.brush }))
           break
         case 'rotation':
           if (!store.isOn(g, x, y)) return
           store.patchCell(g, x, y, (o) => ({ ...o, rot: (((o.rot || 0) + (e.shiftKey ? -45 : 45)) % 360 + 360) % 360 || undefined }))
           break
-        case 'taille': {
-          if (!store.isOn(g, x, y)) return
-          // maj : taille normale ; sinon la taille du pinceau
-          const t = e.shiftKey ? 1 : state.taille
-          store.patchCell(g, x, y, (o) => ({ ...o, scale: Math.abs(t - 1) < 0.01 ? undefined : +t.toFixed(3) }))
+        case 'taille':
+          // une case vide se remplit ; maj : taille normale
+          store.setOn(g, x, y, true)
+          store.patchCell(g, x, y, (o) => withSize(o, e.shiftKey ? 1 : state.taille))
           break
-        }
         case 'nettoyer':
           store.patchCell(g, x, y, () => null)
           break
@@ -274,7 +276,7 @@ export function setupEditor({ params, pieces, update, setLettre }) {
     }
     for (const b of tools.querySelectorAll('button')) b.classList.toggle('current', b.dataset.tool === state.tool)
     brush.style.display = state.tool === 'motif' ? '' : 'none'
-    sizeBrush.style.display = state.tool === 'taille' ? '' : 'none'
+    sizeBrush.style.display = ['dessiner', 'motif', 'taille'].includes(state.tool) ? '' : 'none'
     const custom = store.customChars().includes(params.lettre.toUpperCase())
     originalBtn.style.display = custom ? 'none' : ''
     deleteBtn.style.display = custom ? '' : 'none'
@@ -287,7 +289,7 @@ export function setupEditor({ params, pieces, update, setLettre }) {
     if (document.activeElement !== rowsInput) rowsInput.value = rows
 
     const hint = store.showsOriginal(params.lettre)
-      ? 'lettre d’origine affichée — reclique « original » pour retrouver ta version (si tu la retouches, elle devient ta nouvelle version, ⌘Z pour revenir)'
+      ? 'original affiché'
       : TOOLS.find((t) => t.id === state.tool).hint
     $('#editor-label').textContent = `lettre ${lower ? params.lettre.toLowerCase() : params.lettre} · ${cols}×${rows} · ${hint}`
   }

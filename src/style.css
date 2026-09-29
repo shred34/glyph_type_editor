@@ -57,6 +57,10 @@ main {
 
 .label {
   position: absolute;
+  right: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   top: 8px;
   left: 8px;
   padding: 0 4px;
