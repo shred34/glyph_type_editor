@@ -399,6 +399,10 @@ if (report) {
 }
 
 function renderLibrary() {
+  // « clic : … / liste du cycle » et les numéros n'apparaissent que si l'animation cycle des motifs est active
+  const cycleOn = anim.cycle.actif
+  if (!cycleOn && libraryMode === 'cycle') libraryMode = 'motif'
+  modeBar.style.display = cycleOn ? '' : 'none'
   const cycle = libraryMode === 'cycle'
   const used = cycle
     ? []
@@ -413,7 +417,7 @@ function renderLibrary() {
   for (const item of library.querySelectorAll('.piece')) {
     const n = anim.cycle.liste.indexOf(item.dataset.id)
     item.classList.toggle('active', set.has(item.dataset.id) || (cycle && n >= 0))
-    item.querySelector('.badge').textContent = n >= 0 ? n + 1 : ''
+    item.querySelector('.badge').textContent = cycleOn && n >= 0 ? n + 1 : ''
   }
   for (const b of modeBar.querySelectorAll('button[data-mode]')) b.classList.toggle('current', b.dataset.mode === libraryMode)
   clearCycle.style.display = cycle ? '' : 'none'
@@ -642,6 +646,17 @@ function effect(key, title, build) {
   f.domElement.title = EFFETS[key]
   effectFolders[key] = { f, title }
 }
+let cOrdre
+effect('cycle', 'cycle des motifs', (f, o) => {
+  cOrdre = f.add({ ordre: '' }, 'ordre').name('ordre').disable()
+  f.add({ choisir: () => setLibraryMode('cycle') }, 'choisir').name('choisir les motifs →')
+  help(f.add(o, 'vague', 0.2, 6, 0.1).name('durée d’une vague (s)'), 'temps que met un motif à traverser tout le mot')
+  help(f.add(o, 'pause', -3, 3, 0.1).name('pause entre les vagues (s)'), '0 = la vague suivante part quand la précédente arrive au bout · négatif = elle part avant (les vagues se suivent de près)')
+  help(f.add(o, 'fin', 0, 6, 0.1).name('pause à la fin (s)'), 'une fois le dernier motif arrivé au bout : temps d’attente avant de recommencer')
+  help(f.add(o, 'finMode', ['recommencer', 'aller-retour']).name('à la fin'), 'recommencer : retour direct au 1er motif · aller-retour : les vagues repartent à l’envers')
+  help(f.add(o, 'fondu', 0, 1, 0.01), '0 = le motif change d’un coup · plus haut = le nouveau motif grandit doucement')
+  help(f.add(o, 'empiler').name('empiler les couches'), 'les motifs précédents restent dessous : la lettre s’épaissit couche par couche')
+})
 effect('flottement', 'flottement', (f, o) => {
   f.add(o, 'amplitude', 0, 200, 1)
   help(f.add(o, 'vitesse', 1, 8, 1), 'nombre d’allers-retours par boucle (entier = boucle parfaite)')
@@ -669,17 +684,6 @@ effect('bouillonnement', 'bouillonnement', (f, o) => {
 effect('apparition', 'apparition', (f, o) => {
   help(f.add(o, 'maintien', 0, 0.9, 0.01), 'part de la boucle où tout reste affiché')
   help(f.add(o, 'douceur', 0, 1, 0.01), '0 = apparition sèche · 1 = grossit lentement')
-})
-let cOrdre
-effect('cycle', 'cycle des motifs', (f, o) => {
-  cOrdre = f.add({ ordre: '' }, 'ordre').name('ordre').disable()
-  f.add({ choisir: () => setLibraryMode('cycle') }, 'choisir').name('choisir les motifs →')
-  help(f.add(o, 'vague', 0.2, 6, 0.1).name('durée d’une vague (s)'), 'temps que met un motif à traverser tout le mot')
-  help(f.add(o, 'pause', -3, 3, 0.1).name('pause entre les vagues (s)'), '0 = la vague suivante part quand la précédente arrive au bout · négatif = elle part avant (les vagues se suivent de près)')
-  help(f.add(o, 'fin', 0, 6, 0.1).name('pause à la fin (s)'), 'une fois le dernier motif arrivé au bout : temps d’attente avant de recommencer')
-  help(f.add(o, 'finMode', ['recommencer', 'aller-retour']).name('à la fin'), 'recommencer : retour direct au 1er motif · aller-retour : les vagues repartent à l’envers')
-  help(f.add(o, 'fondu', 0, 1, 0.01), '0 = le motif change d’un coup · plus haut = le nouveau motif grandit doucement')
-  help(f.add(o, 'empiler').name('empiler les couches'), 'les motifs précédents restent dessous : la lettre s’épaissit couche par couche')
 })
 
 // ---------- Export ----------
