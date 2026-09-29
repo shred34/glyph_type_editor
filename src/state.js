@@ -31,14 +31,21 @@ export function loadSaved() {
   }
 }
 
+// pendant une remise à zéro ou un import, plus aucun enregistrement : sinon l'enregistrement automatique
+// pourrait réécrire l'ancien état juste avant le rechargement de la page
+let frozen = false
+
 // réglages seuls (enregistrement automatique)
 export function saveSettings(settings) {
+  if (frozen) return
   try {
     localStorage.setItem(STATE_KEY, JSON.stringify(settings))
   } catch {}
 }
 
+// (toujours suivi d'un rechargement : on bloque les enregistrements d'ici là)
 export function clearSettings() {
+  frozen = true
   try {
     localStorage.removeItem(STATE_KEY)
   } catch {}
@@ -56,6 +63,7 @@ export function fullState(settings) {
 // remplace l'état du navigateur par celui du fichier, puis recharge
 export function applyState(state) {
   if (state?.outil !== 'type-tool') throw new Error('ce fichier ne contient pas d’état type-tool')
+  frozen = true
   try {
     for (const k of Object.keys(localStorage)) if (k.startsWith('type-tool:')) localStorage.removeItem(k)
     for (const [k, v] of Object.entries(state.storage || {})) if (k.startsWith('type-tool:')) localStorage.setItem(k, v)
@@ -130,4 +138,15 @@ function readPngText(png, keyword) {
     pos += 12 + len
   }
   return null
+}
+
+// tout remettre à zéro : efface tout ce que le tool a enregistré dans le navigateur, puis recharge
+export function wipeEverything() {
+  frozen = true
+  for (const store of [localStorage, sessionStorage]) {
+    try {
+      for (const k of Object.keys(store)) if (k.startsWith('type-tool')) store.removeItem(k)
+    } catch {}
+  }
+  location.reload()
 }

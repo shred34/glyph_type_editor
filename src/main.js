@@ -11,7 +11,7 @@ import { SENS, EFFETS, PRESETS, PRESET_DESC, CYCLE_DEFAUT, defaultAnim, resetEff
 import { createCanvasRenderer } from './canvas-render.js'
 import { buildSVG, download } from './export/svg.js'
 import { exportPNG, exportFrames } from './export/png.js'
-import { mergeInto, loadSaved, saveSettings, clearSettings, fullState, applyState, readStateFile } from './state.js'
+import { mergeInto, loadSaved, saveSettings, clearSettings, fullState, applyState, readStateFile, wipeEverything } from './state.js'
 
 const MARGIN = 1.5 * CELL // place pour les motifs qui débordent de la grille
 const ROLE_NAMES = { extremite: 'extrémités', fut: 'fûts', angle: 'angles', jonction: 'jonctions' }
@@ -726,6 +726,15 @@ help(
     location.reload()
   } }, 'reset').name('↺ réglages par défaut'),
   'revient à l’état de départ du tool ; les lettres retouchées et les favoris sont gardés',
+)
+help(
+  fEtat.add({ wipe: () => {
+    const ok = confirm(
+      'Tout réinitialiser ?\n\nRéglages, lettres retouchées, favoris, motifs et caractères ajoutés : tout sera effacé de ce navigateur et la page reviendra à son état de base.\n\nAstuce : « 💾 exporter l’état » avant, pour garder une sauvegarde.',
+    )
+    if (ok) wipeEverything()
+  } }, 'wipe').name('🗑 tout réinitialiser (vider le cache)'),
+  'efface tout ce que le tool a enregistré dans ce navigateur et remet la page à son état de base',
 )
 
 let exporting = false
