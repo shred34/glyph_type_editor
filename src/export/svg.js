@@ -1,6 +1,8 @@
 // Fabrique un SVG autonome (lisible dans Illustrator, Figma…) à partir de l'aperçu
 import { NS, el } from '../svg.js'
 
+const XLINK = 'http://www.w3.org/1999/xlink'
+
 // fond = null → fond transparent ; meta = état du tool, inscrit dans le fichier pour pouvoir le ré-importer
 export function buildSVG(svg, defs, fond, meta) {
   const out = svg.cloneNode(true)
@@ -8,10 +10,17 @@ export function buildSVG(svg, defs, fond, meta) {
 
   // Les épaisseurs de contour passent par une variable CSS (--sw) :
   // on les fige dans une copie des motifs utilisés, par calque.
+  // Pour Illustrator (et autres logiciels) : les couleurs et le contour sont inscrits directement sur les formes
+  // (sans dépendre de l'héritage à travers <use>), et les liens utilisent xlink:href.
   const newDefs = el('defs')
   out.querySelectorAll('.ink > g').forEach((layer, i) => {
     const sw = parseFloat(layer.style.getPropertyValue('--sw')) || 0
     layer.removeAttribute('style')
+    const paint = {
+      fill: layer.getAttribute('fill') || 'none',
+      stroke: layer.getAttribute('stroke') || 'none',
+      'stroke-linejoin': layer.getAttribute('stroke-linejoin') || 'round',
+    }
     const done = new Set()
     for (const use of layer.querySelectorAll('use')) {
       const id = use.getAttribute('href').slice(1)
@@ -23,17 +32,21 @@ export function buildSVG(svg, defs, fond, meta) {
         // toutes les formes du motif (un motif personnel peut en avoir plusieurs)
         for (const shape of g.querySelectorAll('[data-k]')) {
           shape.removeAttribute('style')
-          if (sw) shape.setAttribute('stroke-width', sw * shape.dataset.k)
+          for (const [k, v] of Object.entries(paint)) shape.setAttribute(k, v)
+          if (sw && paint.stroke !== 'none') shape.setAttribute('stroke-width', sw * shape.dataset.k)
           shape.removeAttribute('data-k')
         }
         newDefs.append(g)
       }
-      use.setAttribute('href', '#' + newId)
+      use.removeAttribute('href')
+      use.setAttributeNS(XLINK, 'xlink:href', '#' + newId)
     }
   })
 
   const vb = svg.viewBox.baseVal
   out.setAttribute('xmlns', NS)
+  out.setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:xlink', XLINK)
+  out.setAttribute('version', '1.1')
   out.setAttribute('width', Math.round(vb.width))
   out.setAttribute('height', Math.round(vb.height))
   out.removeAttribute('id')
