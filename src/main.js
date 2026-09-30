@@ -828,9 +828,7 @@ function recipe() {
 }
 const meta = () => fullState(settings())
 
-fExport
-  .add({ svg: () => download(new Blob([previewSVG(anim.image, meta())], { type: 'image/svg+xml' }), `${recipe()}.svg`) }, 'svg')
-  .name('exporter le mot (SVG)')
+// (pas d'export SVG : trop lourd pour Illustrator avec beaucoup de motifs détaillés ; le PNG couvre les usages)
 fExport
   .add({ png: () => exportPNG(previewSVG(anim.image), exportOpts.largeur, `${recipe()}_img${anim.image + 1}.png`, meta()) }, 'png')
   .name('exporter l’image (PNG)')
